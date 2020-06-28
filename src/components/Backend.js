@@ -6,18 +6,14 @@ class Backend {
     const base_url = process.env.API_ROOT
     this.http = _http
     this.resource = {
-      batch_jobs_url: base_url + "/runningjobs",
-      stream_jobs_url: base_url + "/stream/jobs/running",
-      kill_stream_jobs_url: base_url + "/stream/jobs/kill",
-      kill_batch_jobs_url: base_url + "/killjob",
-      job_url: base_url + "/run/script",
+      job_url: base_url + "/yun110/ads/repl",
     }
   }
 
   submitJob(params,
-            submitBefore = () => {
-            }, submitSuccess = () => {
-    }, submitFail = (msg) => {
+    submitBefore = () => {}, 
+    submitSuccess = () => {}, 
+    submitFail = (msg) => {
     }) {
 
     const columns = [];
@@ -32,87 +28,37 @@ class Backend {
     submitBefore()
     self.http.post(resource,
       params, options).then(ok => {
-      submitSuccess()
-      let data = ok.data
-      let keys = []
-      let basket = {};
+        submitSuccess()
+        let data = ok.data.content
+        let keys = []
+        let basket = {};
 
-      //collect all keys
-      data.forEach(function (item) {
-        for (let key in item) {
-          if (!basket[key]) {
-            keys.push(key)
-            basket[key] = true
+        //collect all keys
+        data.forEach(function (item) {
+          for (let key in item) {
+            if (!basket[key]) {
+              keys.push(key)
+              basket[key] = true
+            }
           }
-        }
-      })
-
-      columns.push(...keys)
-
-      data.forEach(function (item) {
-        let new_item = {}
-        keys.forEach(function (key) {
-          new_item[key] = item[key]
         })
-        tableData.push(new_item)
-        console.log(tableData)
-      })
-    }, notok => {
-      submitFail(notok.bodyText)
-    })
-    return {"columns": columns, "tableData": tableData}
-  }
 
-  killJob(jobType, jobId) {
-    const self = this
-    const options = {
-      emulateJSON: true
-    }
-    let finalUrl = self.resource.kill_stream_jobs_url
+        columns.push(...keys)
 
-    if (jobType != "stream") {
-      finalUrl = self.resource.kill_batch_jobs_url
-    }
-
-    const success = []
-    self.http.post(finalUrl, {groupId: jobId}, options).then(ok => {
-      success.push(true)
-    }, notok => {
-      success.push(false)
-    })
-    return success
-  }
-
-  fetchJobs() {
-    const self = this
-    const renderRes = []
-    const options = {
-      emulateJSON: true
-    }
-    self.http.post(self.resource.stream_jobs_url, {}, options).then(ok => {
-      const groupByOwner = Methods.groupBy(ok.data, "owner")
-      for (let key in groupByOwner) {
-        Methods.formatStartTime(groupByOwner[key])
-        renderRes.push({"owner": key, "jobs": groupByOwner[key]})
-      }
-      self.http.post(self.resource.batch_jobs_url, {}, options).then(ok => {
-
-        const groupByOwner = Methods.groupBy(Object.values(ok.data), "owner")
-
-        for (let key in groupByOwner) {
-          Methods.formatStartTime(groupByOwner[key])
-          renderRes.push({"owner": key, "jobs": groupByOwner[key]})
-        }
-
+        data.forEach(function (item) {
+          let new_item = {}
+          keys.forEach(function (key) {
+            new_item[key] = item[key]
+          })
+          tableData.push(new_item)
+          // console.log(tableData)
+        })
       }, notok => {
-
+        submitFail(notok.bodyText)
       })
-
-    }, notok => {
-
-    })
-    return renderRes
+    return { "columns": columns, "tableData": tableData }
   }
+
 }
 
 export default Backend
